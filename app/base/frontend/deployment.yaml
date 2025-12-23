@@ -2,25 +2,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: task-deployment
+  name: react-deployment
   labels:
-    app: task-backend
+    app: react-frontend
+    tier: ui
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: task-backend
+      app: react-frontend
   template:
     metadata:
       labels:
-        app: task-backend
+        app: react-frontend
     spec:
       containers:
         - name: task-image
-          image: galihhhp/elysia-backend:1.5-a
+          image: galihhhp/react-frontend:1.8-a
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 3000
+            - containerPort: 80
           envFrom:
             - configMapRef:
-                name: backend-config
+                name: frontend-config

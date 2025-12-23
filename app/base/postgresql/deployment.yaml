@@ -5,6 +5,7 @@ metadata:
   name: postgresql-deployment
   labels:
     app: postgresql-db
+    tier: database
 spec:
   replicas: 1
   selector:

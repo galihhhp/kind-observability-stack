@@ -2,14 +2,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: react-frontend
+  name: postgresql-db
 spec:
   selector:
-    app: react-frontend
+    app: postgresql-db
   type: ClusterIP
   ports:
-    - name: react-frontend-service
+    - name: postgresql-db-service
       protocol: TCP
-      port: 80
-      targetPort: 80
----
+      port: 5432
+      targetPort: 5432
+
