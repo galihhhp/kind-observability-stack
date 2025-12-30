@@ -1,0 +1,41 @@
+# https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: prometheus
+  namespace: observability
+spec:
+  selector:
+    matchLabels:
+      app: prometheus # has to match .spec.template.metadata.labels
+      tier: server
+  serviceName: "prometheus"
+  replicas: 1 # by default is 1
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: prometheus
+      labels:
+        app: prometheus # has to match .spec.selector.matchLabels
+        tier: server
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v3.8.1
+          ports:
+            - containerPort: 9090
+              name: prometheus
+          volumeMounts:
+            - name: prometheus # has to match volumeClaimTemplates.metadata.name
+              mountPath: /prometheus
+  volumeClaimTemplates:
+    - metadata:
+        name: prometheus
+      spec:
+        storageClassName: standard
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 200Mi
