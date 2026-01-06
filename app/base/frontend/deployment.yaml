@@ -4,21 +4,21 @@ kind: Deployment
 metadata:
   name: react-deployment
   labels:
-    app: react-frontend
+    app: frontend
     tier: ui
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: react-frontend
+      app: frontend
   template:
     metadata:
       labels:
-        app: react-frontend
+        app: frontend
     spec:
       containers:
         - name: task-image
-          image: galihhhp/react-frontend:1.8-a
+          image: galihhhp/react-frontend:1.9
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80

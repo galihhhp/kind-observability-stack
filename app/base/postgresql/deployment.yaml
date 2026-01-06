@@ -4,17 +4,17 @@ kind: Deployment
 metadata:
   name: postgresql-deployment
   labels:
-    app: postgresql-db
+    app: postgres
     tier: database
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: postgresql-db
+      app: postgres
   template:
     metadata:
       labels:
-        app: postgresql-db
+        app: postgres
     spec:
       containers:
         - name: postgresql-image

@@ -2,5 +2,9 @@
 kind: Kustomization
 resources:
   - namespace.yaml
+  - prometheus/serviceaccount.yaml
+  - prometheus/role.yaml
+  - prometheus/rolebinding.yaml
+  - prometheus/configmap.yaml
   - prometheus/service.yaml
   - prometheus/statefulset.yaml

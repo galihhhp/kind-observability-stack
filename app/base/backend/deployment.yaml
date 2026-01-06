@@ -4,21 +4,21 @@ kind: Deployment
 metadata:
   name: task-deployment
   labels:
-    app: task-backend
+    app: backend
     tier: api
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: task-backend
+      app: backend
   template:
     metadata:
       labels:
-        app: task-backend
+        app: backend
     spec:
       containers:
         - name: task-image
-          image: galihhhp/elysia-backend:1.5-a
+          image: galihhhp/elysia-backend:1.6
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
