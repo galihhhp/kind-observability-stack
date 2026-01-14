@@ -7,7 +7,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 BOLD='\033[1m'
 
-CLUSTER_NAME="app-cluster"
+CLUSTER_NAME="kind-app-cluster"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 KIND_CONFIG="$PROJECT_DIR/app/kind-config.yaml"

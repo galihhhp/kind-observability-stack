@@ -6,3 +6,5 @@ resources:
   - frontend/service.yaml
   - postgresql/deployment.yaml
   - postgresql/service.yaml
+  - postgresql/secret.yaml
+  - postgresql/pvc.yaml

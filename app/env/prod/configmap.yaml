@@ -5,10 +5,13 @@ metadata:
   name: backend-config
 data:
   NODE_ENV: "production"
-  DB_PASSWORD: "12345"
+  DB_HOST: "postgres-service"
+  DB_PORT: "5432"
+  DB_NAME: "postgres"
+  DB_COLUMN_ID: "id"
+  DB_COLUMN_TASK: "task"
   FEATURE_EDIT_TASK: "true"
   FEATURE_DELETE_TASK: "true"
-  # backend's image have default value for all env variables
 
 ---
 apiVersion: v1
@@ -16,5 +19,25 @@ kind: ConfigMap
 metadata:
   name: frontend-config
 data:
+  API_URL: "http://localhost:3000"
   FEATURE_EDIT_TASK: "true"
   FEATURE_DELETE_TASK: "true"
+  VITE_APP_VERSION: "1.8-prod"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-config
+data:
+  POSTGRES_DB: "postgres"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-init
+data:
+  init.sql: |
+    CREATE TABLE IF NOT EXISTS main_table (
+        id SERIAL PRIMARY KEY,
+        task VARCHAR(255) NOT NULL
+    );

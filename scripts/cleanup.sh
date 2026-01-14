@@ -7,7 +7,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 BOLD='\033[1m'
 
-CLUSTER_NAME="app-cluster"
+CLUSTER_NAME="kind-app-cluster"
 STOP_DOCKER=false
 FULL_CLEAN=false
 

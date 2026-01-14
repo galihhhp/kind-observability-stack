@@ -1,342 +1,222 @@
 ## Project Overview – Observability Stack
 
-Folder `obervability/` ini berfokus ke observability full stack untuk memonitor aplikasi di `app/`:
+Folder `observability/` ini berfokus ke observability stack untuk memonitor aplikasi di `app/`:
 
 - Prometheus (metrics collection)
 - Grafana (dashboards)
-- Loki + Promtail (logs)
-- kube-state-metrics, node-exporter (cluster metrics)
+- kube-state-metrics (cluster metrics)
+- node-exporter (node metrics)
 
-**Prerequisites:**
+📐 **Architecture & Data Flow**: Lihat [`../ARCHITECTURE.md`](../ARCHITECTURE.md) untuk visual diagrams.
+
+---
+
+## Prerequisites
 
 - Cluster sudah dibuat dan aplikasi sudah running di namespace `development` (lihat `app/README.md`)
 - Namespace `development` dengan pods backend, frontend, dan PostgreSQL sudah ada
 
-**Kontrak dengan Aplikasi:**
-Observability stack mengasumsikan aplikasi di namespace `development` dengan:
-
-- Labels: `app=backend|frontend|postgres`, `tier=api|ui|database`
-- Service names: `backend-service`, `frontend-service`, `postgres-service`
-- Logs dicetak ke stdout/stderr
-
-[Inference] File manifests untuk stack observability belum dibuat di repo ini; dokumen ini bertindak sebagai blueprint yang bisa kamu implementasikan secara bertahap.
-
 ---
 
-## Phase 1: Metrics Stack (Prometheus + kube-state-metrics + node-exporter)
-
-Target phase ini: bisa mengumpulkan metrics dari cluster dan aplikasi.
-Semua dikelola sebagai manifests YAML dan diorganisasi dengan Kustomize.
+## Phase 1: Metrics Stack
 
 ### Task 1.0: Observability Base Structure
 
 **Files:**
+- `observability/base/kustomization.yaml`
+- `observability/env/dev/namespace.yaml`
 
-- `obervability/base/kustomization.yaml`
-- `obervability/base/namespace.yaml`
-
-**Requirements:**
-
+**Implementation:**
 - Namespace: `observability`
-- Kustomization base mereferensikan semua komponen observability (akan ditambah di task berikut)
+- Kustomization base mereferensikan semua komponen observability
 
 **Learning:**
-
 - ✅ Observability namespace
 - ✅ Kustomize untuk stack observability
 
 ---
 
-### Task 1.1: Prometheus + kube-state-metrics + node-exporter
+### Task 1.1: Prometheus
 
 **Files:**
+- `observability/base/prometheus/serviceaccount.yaml`
+- `observability/base/prometheus/role.yaml`
+- `observability/base/prometheus/rolebinding.yaml`
+- `observability/base/prometheus/configmap.yaml`
+- `observability/base/prometheus/service.yaml`
+- `observability/base/prometheus/statefulset.yaml`
 
-- `obervability/base/prometheus/`
-- `obervability/base/kube-state-metrics/`
-- `obervability/base/node-exporter/`
-
-**Requirements:**
-
-- Tambahkan:
-  - Prometheus Deployment/StatefulSet + Service
-  - kube-state-metrics Deployment + Service
-  - node-exporter DaemonSet + Service
-- Konfigurasi Prometheus scrape:
-  - Cluster metrics (node, pod, service)
-  - Kube-state-metrics
-  - node-exporter
-- Semua file direferensikan oleh `obervability/base/kustomization.yaml`
+**Implementation:**
+- StatefulSet dengan PVC untuk data persistence
+- ConfigMap untuk scrape configuration
+- RBAC untuk akses ke Kubernetes API
+- Scrape targets: prometheus, node-exporter, kube-state-metrics, backend pods
 
 **Learning:**
-
-- ✅ Prometheus deployment pattern
-- ✅ Cluster metrics scraping
-- ✅ Kube-state-metrics usage
-- ✅ Node-level metrics via node-exporter
+- ✅ Prometheus deployment pattern (StatefulSet)
+- ✅ Scrape configuration via ConfigMap
+- ✅ RBAC untuk Prometheus
+- ✅ Kubernetes service discovery
 
 ---
 
-### Task 1.2: Overlays for Dev Observability
+### Task 1.2: kube-state-metrics
 
 **Files:**
+- `observability/base/kube-state-metrics/serviceaccount.yaml`
+- `observability/base/kube-state-metrics/clusterrole.yaml`
+- `observability/base/kube-state-metrics/clusterrolebinding.yaml`
+- `observability/base/kube-state-metrics/deployment.yaml`
+- `observability/base/kube-state-metrics/service.yaml`
 
-- `obervability/env/dev/kustomization.yaml`
-
-**Requirements:**
-
-- Overlay dev:
-  - Set namespace: `observability`
-  - Opsional: patch resource requests/limits agar pas untuk cluster lokal
-- Deploy:
-  - `kubectl apply -k obervability/env/dev`
-- Verifikasi:
-  - `kubectl get pods -n observability`
-  - `kubectl get svc -n observability`
+**Implementation:**
+- Deployment untuk kube-state-metrics
+- ClusterRole untuk akses ke semua resources
+- Service untuk expose metrics ke Prometheus
 
 **Learning:**
-
-- ✅ Kustomize overlays untuk observability
-- ✅ Deployment observability stack ke dev
+- ✅ kube-state-metrics usage
+- ✅ ClusterRole vs Role
+- ✅ Kubernetes object metrics
 
 ---
 
-## Phase 2: Logs Stack (Loki + Promtail)
-
-Target: mengumpulkan logs dari semua pod, termasuk aplikasi sendiri.
-
-### Task 2.0: Loki Deployment
+### Task 1.3: node-exporter
 
 **Files:**
+- `observability/base/node-exporter/serviceaccount.yaml`
+- `observability/base/node-exporter/clusterrole.yaml`
+- `observability/base/node-exporter/clusterrolebinding.yaml`
+- `observability/base/node-exporter/daemonset.yaml`
+- `observability/base/node-exporter/service.yaml`
 
-- `obervability/base/loki/`
-
-**Requirements:**
-
-- Deploy Loki sebagai log store:
-  - StatefulSet/Deployment
-  - Service ClusterIP
-- Konfigurasi storage:
-  - Untuk lokal boleh pakai storage sederhana (emptyDir atau hostPath)
+**Implementation:**
+- DaemonSet agar berjalan di setiap node
+- Host network dan host PID untuk akses node metrics
+- Service untuk expose metrics ke Prometheus
 
 **Learning:**
-
-- ✅ Loki deployment basics
-- ✅ Log storage pattern
+- ✅ DaemonSet pattern
+- ✅ Node-level metrics collection
+- ✅ Host namespace access
 
 ---
 
-### Task 2.1: Promtail DaemonSet
+## Phase 2: Grafana Dashboards
+
+### Task 2.0: Grafana Deployment
 
 **Files:**
+- `observability/base/grafana/deployment.yaml`
+- `observability/base/grafana/service.yaml`
+- `observability/base/grafana/pvc.yaml`
+- `observability/base/grafana/secret.yaml`
 
-- `obervability/base/promtail/`
-
-**Requirements:**
-
-- Deploy Promtail sebagai DaemonSet di semua node
-- Konfigurasi Promtail:
-  - Tail logs dari `/var/log/containers`
-  - Kirim ke Loki dengan label:
-    - namespace
-    - pod
-    - container
-    - app
-- Tambahkan semua resource ke `obervability/base/kustomization.yaml`
+**Implementation:**
+- Deployment dengan PVC untuk dashboard persistence
+- Secret untuk admin credentials
+- Security context (runAsNonRoot)
 
 **Learning:**
-
-- ✅ Promtail DaemonSet
-- ✅ Container log scraping
-- ✅ Labeling logs untuk query di Loki
-
----
-
-### Task 2.2: Verify Logs Flow
-
-**Checklist:**
-
-- [ ] Pods Loki dan Promtail running: `kubectl get pods -n observability`
-- [ ] Generate logs di backend:
-  - Hit endpoint `/api/hello` beberapa kali
-  - `kubectl logs` untuk verifikasi
-- [ ] Verifikasi logs muncul di Loki (nanti via Grafana di phase berikut)
-
-**Learning:**
-
-- ✅ End-to-end log pipeline
-- ✅ Debugging logs di cluster
-
----
-
-## Phase 3: Grafana Dashboards
-
-Target: punya satu UI pusat untuk melihat metrics dan logs.
-
-### Task 3.0: Grafana Deployment
-
-**Files:**
-
-- `obervability/base/grafana/`
-
-**Requirements:**
-
-- Deploy Grafana Deployment + Service
-- Expose Grafana:
-  - Opsi A: NodePort (misal 32000)
-  - Opsi B: Ingress (kalau sudah ada Ingress controller)
-- Tambahkan ke `obervability/base/kustomization.yaml`
-
-**Learning:**
-
 - ✅ Grafana deployment
-- ✅ External access patterns (NodePort atau Ingress)
+- ✅ Secret untuk credentials
+- ✅ PVC untuk persistence
 
 ---
 
-### Task 3.1: Connect Prometheus and Loki as Data Sources
+### Task 2.1: Connect Prometheus as Data Source
 
 **Steps:**
-
-- Masuk ke Grafana (pakai NodePort atau port-forward)
-- Tambahkan Prometheus sebagai data source:
-  - URL: Service Prometheus (ClusterIP atau via port-forward)
-- Tambahkan Loki sebagai data source:
-  - URL: Service Loki
+1. Port-forward Grafana: `kubectl port-forward svc/grafana 3000:3000 -n observability`
+2. Login ke Grafana (lihat secret untuk credentials)
+3. Add Data Source → Prometheus
+4. URL: `http://prometheus:9090`
+5. Save & Test
 
 **Learning:**
-
 - ✅ Grafana data source configuration
-- ✅ Integrasi metrics dan logs
+- ✅ Internal service DNS
 
 ---
 
-### Task 3.2: Dashboards untuk Cluster dan Aplikasi
+### Task 2.2: Import Dashboards
 
-**Tasks:**
+**Recommended Dashboards:**
+- Kubernetes Cluster (ID: 6417)
+- Node Exporter Full (ID: 1860)
+- Kubernetes Pods (ID: 6336)
 
-- Import dashboard siap pakai untuk:
-  - Kubernetes cluster
-  - Node metrics
-- Buat dashboard custom:
-  - Panel metrics backend (request count, error count, latency bila ada)
-  - Panel logs (Loki Explore atau panel logs di dashboard)
+**Steps:**
+1. Grafana → Dashboards → Import
+2. Enter dashboard ID
+3. Select Prometheus data source
+4. Import
 
 **Learning:**
-
-- ✅ Dashboard creation
+- ✅ Dashboard import
 - ✅ Metrics visualization
-- ✅ Logs exploration
 
 ---
 
-## Phase 4: Validation & Failure Scenarios
+## Phase 3: Validation
 
-### Task 4.1: Simulate Failures
+### Task 3.1: Verify Stack
+
+**Checklist:**
+- [ ] Pods running: `kubectl get pods -n observability`
+- [ ] Services exposed: `kubectl get svc -n observability`
+- [ ] Prometheus targets UP: http://localhost:9090/targets (via port-forward)
+- [ ] Grafana accessible: http://localhost:3000 (via port-forward)
+- [ ] Data source connected: Grafana → Configuration → Data Sources
+
+---
+
+### Task 3.2: Simulate Failures
 
 **Scenarios:**
-
-- Scale down backend ke 0 replicas dan lihat efeknya di metrics (Prometheus)
-- Paksa pod crash (image salah atau env salah) dan lihat error di logs (Loki)
-- Observasi di Grafana:
-  - Perubahan metrics (pod availability)
-  - Logs error (stack traces)
-
-**Learning:**
-
-- ✅ Practical troubleshooting dengan metrics + logs
-- ✅ Observability-driven debugging
-
----
-
-## Phase 5: Testing, Validation, and Cleanup
-
-### Task 5.1: Manual Testing Checklist
-
-**Test Scenarios:**
-
-- [ ] Cluster running: `kubectl get nodes`
-- [ ] Namespace `development` dan `observability` ada
-- [ ] Pods aplikasi running di namespace `development`
-- [ ] Pods observability stack running di namespace `observability`
-- [ ] Prometheus UI bisa diakses (via port-forward atau Service)
-- [ ] Grafana UI bisa diakses
-- [ ] Data source Prometheus dan Loki healthy di Grafana
-- [ ] Dashboard cluster menunjukkan metrics
-- [ ] Logs backend terlihat di Grafana (Loki)
-
-**Learning:**
-
-- ✅ End-to-end verification
-- ✅ Manual testing procedures
-
----
-
-### Task 5.2: Cleanup & Reproducibility
+- Scale down backend ke 0 replicas dan lihat efeknya di metrics (Prometheus/Grafana)
+- Paksa pod crash (image salah atau env salah) dan observasi di Grafana
 
 **Commands:**
-
 ```bash
-kubectl delete namespace observability
+kubectl scale deployment/task-deployment --replicas=0 -n development
+
+kubectl scale deployment/task-deployment --replicas=1 -n development
 ```
 
 **Learning:**
-
-- ✅ Idempotent workflows
-- ✅ Clean teardown
-- ✅ Confidence untuk rebuild dari nol
-
----
-
-## Project Structure (Suggested)
-
-```text
-obervability/
-├── base/
-│   ├── kustomization.yaml
-│   ├── namespace.yaml
-│   ├── prometheus/
-│   ├── kube-state-metrics/
-│   ├── node-exporter/
-│   ├── loki/
-│   ├── promtail/
-│   └── grafana/
-└── env/
-    └── dev/
-        └── kustomization.yaml
-```
+- ✅ Practical troubleshooting dengan metrics
+- ✅ Observability-driven debugging
 
 ---
 
 ## Expected Deliverables
 
-### 1. Infrastructure yang Running
+### 1. Infrastructure Running
+- ✅ Namespace `observability`
+- ✅ Prometheus (StatefulSet with PVC)
+- ✅ kube-state-metrics (Deployment)
+- ✅ node-exporter (DaemonSet)
+- ✅ Grafana (Deployment with PVC)
 
-- ✅ Namespace `observability` untuk observability stack
-- ✅ Observability stack lengkap running di `observability`:
-  - Prometheus
-  - kube-state-metrics
-  - node-exporter
-  - Loki
-  - Promtail
-  - Grafana
+### 2. Access
+- ✅ Prometheus UI via port-forward (localhost:9090)
+- ✅ Grafana UI via port-forward (localhost:3000)
+- ✅ All Prometheus targets UP
 
-### 2. Akses ke Sistem
+### 3. Skills
+- ✅ Deploy observability stack dengan Kustomize
+- ✅ Configure Prometheus scrape targets
+- ✅ Setup Grafana data sources
+- ✅ Import & create dashboards
+- ✅ Debug issues menggunakan metrics
 
-- ✅ Backend API accessible via Service (NodePort atau Ingress)
-- ✅ Grafana accessible via browser
-- ✅ Prometheus UI accessible
-- ✅ Logs bisa di-query via Grafana (Loki)
+---
 
-### 3. Skills yang Dikuasai
+## Next Steps
 
-- ✅ Deploy observability stack full dengan manifests yang diorganisasi via Kustomize
-- ✅ Baca dan pahami metrics cluster dan aplikasi
-- ✅ Baca dan filter logs via Loki di Grafana
-- ✅ Debug issue aplikasi menggunakan kombinasi metrics + logs
-
-### 4. Next Steps
-
-- ✅ Tambah HPA (Horizontal Pod Autoscaler) menggunakan metrics Prometheus
-- ✅ Tambah Ingress + TLS untuk akses Grafana dan aplikasi
-- ✅ Tambah Alertmanager untuk integrasi alert ke channel eksternal (email, Slack)
-- ✅ Refactor observability manifests menjadi reusable modules untuk project lain
+- ⬜ Add Grafana datasource provisioning via ConfigMap
+- ⬜ Add dashboard provisioning via ConfigMap
+- ⬜ Add Alertmanager untuk alerting
+- ⬜ Add HPA (Horizontal Pod Autoscaler) berbasis Prometheus metrics
+- ⬜ Add Ingress untuk akses Grafana
